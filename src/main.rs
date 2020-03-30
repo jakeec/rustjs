@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 enum Operator {
     Equals,
+    Add,
 }
 
 #[derive(Debug)]
@@ -36,6 +37,9 @@ impl Interpreter {
 
     fn get_char(&mut self) {
         self.counter += 1;
+        if self.source[self.counter] == '\x03' {
+            return;
+        }
         self.lookahead = Some(self.source[self.counter]);
     }
 
@@ -49,7 +53,9 @@ impl Interpreter {
             None => panic!("Expected {} found nothing!", c),
         }
 
-        self.get_char();
+        if self.counter < self.source.len() - 1 {
+            self.get_char();
+        }
     }
 
     fn whitespace(&mut self) {
@@ -75,11 +81,10 @@ impl Interpreter {
 
     fn ident(&mut self) -> String {
         let mut ident = String::new();
-        while self.get_lookahead() != ' ' {
+        while self.get_lookahead() != ' ' && self.get_lookahead() != ';' {
             ident.push(self.get_lookahead());
             self.get_char();
         }
-        println!("New identifier created: {}", ident);
         self.whitespace();
         ident
     }
@@ -96,6 +101,11 @@ impl Interpreter {
             Equals => {
                 if op != String::from("=") {
                     panic!("Expected operator '=' found {}", op);
+                }
+            }
+            Add => {
+                if op != String::from("+") {
+                    panic!("Expected operator '+' found {}", op);
                 }
             }
         }
@@ -156,6 +166,7 @@ impl Interpreter {
         if !self.matches_char('+') {
             None
         } else {
+            self.operator(Operator::Add);
             let second_ident = self.ident();
             let a = &self.lookup_table[&first_ident];
             let b = &self.lookup_table[&second_ident];
@@ -200,6 +211,9 @@ impl Interpreter {
     }
 
     fn new_line(&mut self) {
+        if self.counter >= self.source.len() - 1 {
+            return;
+        }
         self.match_char('\n');
         self.whitespace();
     }
@@ -209,9 +223,7 @@ impl Interpreter {
     }
 
     fn program(&mut self) {
-        println!("{:?}", self.source);
-        while self.counter < self.source.len() {
-            println!("LOOKUP: {:?}", self.lookup_table);
+        while self.counter < self.source.len() - 1 {
             self.statement();
             self.new_line();
         }
@@ -221,7 +233,7 @@ impl Interpreter {
 fn main() {
     let input = "var jakeVar = 10;
     var b = 20;
-    var c = jakeVar + b";
+    var c = jakeVar + b;\x03";
     let mut interpreter = Interpreter::new(input.chars().collect());
     interpreter.init();
     interpreter.program();
