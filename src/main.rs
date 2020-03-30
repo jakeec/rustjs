@@ -1,11 +1,26 @@
+use std::collections::HashMap;
+
 enum Operator {
     Equals,
+}
+
+#[derive(Debug)]
+enum Types {
+    Null,
+    Undefined,
+    Number(f64),
+    Boolean(bool),
+    TextString(String),
+    Object(HashMap<String, Types>),
+    Function(String),
 }
 
 struct Interpreter {
     source: Vec<char>,
     counter: usize,
     lookahead: Option<char>,
+    lookahead_counter: usize,
+    lookup_table: HashMap<String, Types>,
 }
 
 impl Interpreter {
@@ -14,6 +29,8 @@ impl Interpreter {
             source,
             counter: 0,
             lookahead: None,
+            lookahead_counter: 0,
+            lookup_table: HashMap::new(),
         }
     }
 
@@ -56,7 +73,7 @@ impl Interpreter {
         }
     }
 
-    fn ident(&mut self) {
+    fn ident(&mut self) -> String {
         let mut ident = String::new();
         while self.get_lookahead() != ' ' {
             ident.push(self.get_lookahead());
@@ -64,6 +81,7 @@ impl Interpreter {
         }
         println!("New identifier created: {}", ident);
         self.whitespace();
+        ident
     }
 
     fn operator(&mut self, operator: Operator) {
@@ -98,7 +116,7 @@ impl Interpreter {
         }
     }
 
-    fn number(&mut self) {
+    fn number(&mut self) -> f64 {
         let mut num = String::new();
         while self.get_lookahead() != ' ' && self.get_lookahead() != ';' {
             num.push(self.get_digit());
@@ -106,6 +124,7 @@ impl Interpreter {
         }
 
         self.whitespace();
+        num.parse().unwrap()
     }
 
     fn eol(&mut self) {
@@ -131,9 +150,26 @@ impl Interpreter {
 
     fn string(&mut self) {}
 
-    fn expression(&mut self) {
+    fn add(&mut self) -> Option<f64> {
+        self.lookahead_counter = self.counter;
+        let first_ident = self.ident();
+        if !self.matches_char('+') {
+            None
+        } else {
+            let second_ident = self.ident();
+            let a = &self.lookup_table[&first_ident];
+            let b = &self.lookup_table[&second_ident];
+
+            match (a, b) {
+                (Types::Number(a_), Types::Number(b_)) => Some(a_ + b_),
+                _ => panic!("NOT A VALID ADDITION!"),
+            }
+        }
+    }
+
+    fn expression(&mut self) -> Types {
         if self.is_digit() {
-            self.number();
+            return Types::Number(self.number());
         }
 
         if self.matches_char('"') {
@@ -141,17 +177,26 @@ impl Interpreter {
         }
 
         if self.is_alpha() {
-            println!("arithmetic!");
+            let result = self.add();
+            match result {
+                Some(res) => return Types::Number(res),
+                None => return Types::Undefined,
+            }
         }
 
-        self.eol();
+        Types::Undefined
     }
 
     fn statement(&mut self) {
         self.keyword("var");
-        self.ident();
+        let ident = self.ident();
         self.operator(Operator::Equals);
-        self.expression();
+        let value = self.expression();
+        match value {
+            Types::Number(_) => self.lookup_table.insert(ident, value),
+            _ => None,
+        };
+        self.eol();
     }
 
     fn new_line(&mut self) {
@@ -166,6 +211,7 @@ impl Interpreter {
     fn program(&mut self) {
         println!("{:?}", self.source);
         while self.counter < self.source.len() {
+            println!("LOOKUP: {:?}", self.lookup_table);
             self.statement();
             self.new_line();
         }
