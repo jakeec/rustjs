@@ -16,6 +16,7 @@ enum Types {
     Function(String),
 }
 
+#[derive(Debug)]
 struct Function {
     arguments: HashMap<String, Types>,
     code: String,
@@ -107,7 +108,7 @@ impl Interpreter {
 
     fn ident(&mut self) -> String {
         let mut ident = String::new();
-        while self.lookahead_is_not(&[' ', ';', ',']) {
+        while self.lookahead_is_not(&[' ', ';', ',', '(']) {
             ident.push(self.get_lookahead());
             self.get_char();
         }
@@ -297,9 +298,46 @@ impl Interpreter {
         }
     }
 
+    fn is_function_call(&mut self) -> bool {
+        let mut ident = String::new();
+        let reset_counter = self.counter;
+        while self.lookahead_is_not(&[' ', ';', ',', '(']) {
+            ident.push(self.get_lookahead());
+            self.get_char();
+        }
+        let match_1 = self.matches_char('(');
+        self.get_char();
+        let match_2 = self.matches_char(')');
+        self.counter = reset_counter;
+        self.lookahead = Some(self.source[self.counter]);
+        ident.len() > 0 && match_1 && match_2
+    }
+
+    fn function_call(&mut self) {
+        let name = self.ident();
+        self.match_char('(');
+        self.match_char(')');
+        self.eol();
+        println!("{:?}", self.lookup_table);
+        println!("{}", name);
+        println!("{:?}", &self.lookup_table["myFunc"]);
+        if let Types::Function(scope_id) = &self.lookup_table[&name] {
+            let scope: &Function = &self.scope_table[scope_id];
+            let mut scope_interpreter = Interpreter::new(scope.code.chars().collect());
+            scope_interpreter.init();
+            scope_interpreter.whitespace();
+            scope_interpreter.program();
+            println!("code: {:?}", scope);
+        }
+    }
+
     fn program(&mut self) {
         while self.counter < self.source.len() - 1 {
-            self.statement();
+            if self.is_function_call() {
+                self.function_call();
+            } else {
+                self.statement();
+            }
             self.new_line();
         }
     }
@@ -311,7 +349,9 @@ fn main() {
     var c = jakeVar + b;
     var myFunc = () => {
         var scopedVar = 10;
+        console.log();
     };
+    myFunc();
     \x03";
     let mut interpreter = Interpreter::new(input.chars().collect());
     interpreter.init();
