@@ -16,12 +16,19 @@ enum Types {
     Function(String),
 }
 
+struct Function {
+    arguments: HashMap<String, Types>,
+    code: String,
+}
+
 struct Interpreter {
     source: Vec<char>,
     counter: usize,
     lookahead: Option<char>,
     lookahead_counter: usize,
     lookup_table: HashMap<String, Types>,
+    scope_table: HashMap<String, Function>,
+    scope_index: usize,
 }
 
 impl Interpreter {
@@ -32,15 +39,18 @@ impl Interpreter {
             lookahead: None,
             lookahead_counter: 0,
             lookup_table: HashMap::new(),
+            scope_table: HashMap::new(),
+            scope_index: 0,
         }
     }
 
-    fn get_char(&mut self) {
+    fn get_char(&mut self) -> Option<char> {
         self.counter += 1;
         if self.source[self.counter] == '\x03' {
-            return;
+            return None;
         }
         self.lookahead = Some(self.source[self.counter]);
+        self.lookahead
     }
 
     fn match_char(&mut self, c: char) {
@@ -55,6 +65,12 @@ impl Interpreter {
 
         if self.counter < self.source.len() - 1 {
             self.get_char();
+        }
+    }
+
+    fn optionally_match_char(&mut self, c: char) {
+        if self.get_lookahead() == c {
+            self.match_char(c);
         }
     }
 
@@ -79,9 +95,19 @@ impl Interpreter {
         }
     }
 
+    fn lookahead_is_not(&mut self, chars: &[char]) -> bool {
+        for c in chars {
+            if self.get_lookahead() == *c {
+                return false;
+            }
+        }
+
+        true
+    }
+
     fn ident(&mut self) -> String {
         let mut ident = String::new();
-        while self.get_lookahead() != ' ' && self.get_lookahead() != ';' {
+        while self.lookahead_is_not(&[' ', ';', ',']) {
             ident.push(self.get_lookahead());
             self.get_char();
         }
@@ -195,7 +221,45 @@ impl Interpreter {
             }
         }
 
+        if self.matches_char('(') {
+            return Types::Function(self.arrow_function());
+        }
+
         Types::Undefined
+    }
+
+    fn arrow_function(&mut self) -> String {
+        self.match_char('(');
+        while self.get_lookahead() != ')' {
+            self.ident();
+        }
+        self.match_char(')');
+        self.whitespace();
+        self.match_char('=');
+        self.match_char('>');
+        self.whitespace();
+        self.match_char('{');
+        self.optionally_match_char('\n');
+        let mut function_body = String::new();
+        while self.lookahead_is_not(&['}']) {
+            match self.get_char() {
+                Some(c) => function_body.push(c),
+                None => panic!("End of stream"),
+            }
+        }
+        // self.whitespace();
+        // self.block();
+        self.match_char('}');
+        self.scope_table.insert(
+            self.scope_index.to_string(),
+            Function {
+                arguments: HashMap::new(),
+                code: function_body,
+            },
+        );
+        let function_id = self.scope_index.to_string();
+        self.scope_index += 1;
+        function_id
     }
 
     fn statement(&mut self) {
@@ -203,10 +267,13 @@ impl Interpreter {
         let ident = self.ident();
         self.operator(Operator::Equals);
         let value = self.expression();
-        match value {
-            Types::Number(_) => self.lookup_table.insert(ident, value),
-            _ => None,
-        };
+        println!("STATEMENT: {}, {:?}", ident, value);
+        self.lookup_table.insert(ident, value);
+        // match value {
+        //     Types::Number(_) => self.lookup_table.insert(ident, value),
+        //     Types::Function(_) => self.lookup_table.insert(ident, value),
+        //     _ => None,
+        // };
         self.eol();
     }
 
@@ -222,6 +289,14 @@ impl Interpreter {
         self.lookahead = Some(self.source[self.counter]);
     }
 
+    fn block(&mut self) {
+        while self.lookahead_is_not(&['}']) {
+            println!("{:?}", self.get_lookahead());
+            self.statement();
+            self.new_line();
+        }
+    }
+
     fn program(&mut self) {
         while self.counter < self.source.len() - 1 {
             self.statement();
@@ -233,7 +308,11 @@ impl Interpreter {
 fn main() {
     let input = "var jakeVar = 10;
     var b = 20;
-    var c = jakeVar + b;\x03";
+    var c = jakeVar + b;
+    var myFunc = () => {
+        var scopedVar = 10;
+    };
+    \x03";
     let mut interpreter = Interpreter::new(input.chars().collect());
     interpreter.init();
     interpreter.program();
