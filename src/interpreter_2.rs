@@ -113,7 +113,9 @@ impl<'a> Expression for Interpreter<'a> {
             let ident = self.ident();
             let value = &self.value_table[&ident];
             match value {
-                Type::Function(name) => {}
+                Type::Function(name) => {
+                    // evaluate the function and return the result
+                }
                 _ => return value.clone(),
             }
         }
@@ -162,6 +164,22 @@ mod test {
         match result {
             Type::Number(number) => {
                 assert_eq!(number, 12f64);
+            }
+            _ => panic!("Expected string!"),
+        }
+    }
+
+    #[test]
+    fn term_variable() {
+        let code = "myVar;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        interpreter
+            .value_table
+            .insert(String::from("myVar"), Type::Number(10f64));
+        let result = interpreter.term();
+        match result {
+            Type::Number(number) => {
+                assert_eq!(number, 10f64);
             }
             _ => panic!("Expected string!"),
         }

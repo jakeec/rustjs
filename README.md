@@ -7,6 +7,7 @@ Seeing how far I can get building a recursive descent parsing interpreter for Ja
 - Should try pushing function scope onto a stack and popping when it goes out of stack rather than recursively spinning up a new compiler
 - Maintain two pointers, lookahead and current
 - What happens if lookahead and current pointers get out of sync?
+- In JavaScript arrays are objects but it might be easier for me to treat them as a different type entirely
 
 ### Values
 
