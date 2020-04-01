@@ -31,13 +31,13 @@ impl Interpreter {
     fn current(&mut self) -> char {
         let current = self.scope()[self.current];
         self.current += 1;
+        self.lookahead += 1;
         current
     }
 
     /// Gets the next character but doesn't consume it. Increments the lookahead counter.
     fn lookahead(&mut self) -> char {
         let lookahead = self.scope()[self.lookahead];
-        self.lookahead += 1;
         lookahead
     }
 
@@ -64,6 +64,7 @@ impl Interpreter {
 trait Expression {
     fn expression(&mut self) -> Types;
     fn string(&mut self) -> String;
+    fn number(&mut self) -> f64;
 }
 
 impl Expression for Interpreter {
@@ -77,10 +78,18 @@ impl Expression for Interpreter {
         string
     }
 
+    fn number(&mut self) -> f64 {
+        let mut number = String::new();
+        while self.is_digit() {
+            number.push(self.current());
+        }
+        number.parse().unwrap()
+    }
+
     fn expression(&mut self) -> Types {
-        // if self.is_digit() {
-        //     return Types::Number(self.number());
-        // }
+        if self.is_digit() {
+            return Types::Number(self.number());
+        }
 
         if self.matches_char('"') {
             return Types::TextString(self.string());
@@ -125,8 +134,8 @@ mod test {
         let mut interpreter = Interpreter::new(code.chars().collect());
         let result = interpreter.expression();
         match result {
-            Types::TextString(string) => {
-                assert_eq!(string, "jake");
+            Types::Number(number) => {
+                assert_eq!(number, 12f64);
             }
             _ => panic!("Expected string!"),
         }
