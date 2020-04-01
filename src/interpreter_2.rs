@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 
-use crate::types::{Function, Types};
+use crate::types::{Function, Type};
 
-struct Interpreter {
+struct Interpreter<'a> {
     scope_stack: Vec<Vec<char>>,
     current: usize,
     lookahead: usize,
-    value_table: HashMap<String, Types>,
-    function_table: HashMap<String, Function>,
+    value_table: HashMap<String, Type<'a>>,
+    function_table: HashMap<String, Function<'a>>,
 }
 
-impl Interpreter {
+impl<'a> Interpreter<'a> {
     pub fn new(source: Vec<char>) -> Self {
         let mut scope_stack = vec![source];
         Self {
@@ -36,7 +36,7 @@ impl Interpreter {
     }
 
     /// Gets the next character but doesn't consume it. Increments the lookahead counter.
-    fn lookahead(&mut self) -> char {
+    fn lookahead(&self) -> char {
         let lookahead = self.scope()[self.lookahead];
         lookahead
     }
@@ -48,26 +48,32 @@ impl Interpreter {
         }
     }
 
-    fn matches_char(&mut self, char_to_match: char) -> bool {
+    fn matches_char(&self, char_to_match: char) -> bool {
         self.lookahead() == char_to_match
     }
 
-    fn is_digit(&mut self) -> bool {
+    fn is_digit(&self) -> bool {
         self.lookahead().is_digit(10)
     }
 
-    fn is_alpha(&mut self) -> bool {
+    fn is_alpha(&self) -> bool {
         self.lookahead().is_alphabetic()
+    }
+
+    fn is_alphanum(&self) -> bool {
+        self.is_alpha() || self.is_digit()
     }
 }
 
 trait Expression {
-    fn expression(&mut self) -> Types;
+    fn expression(&mut self) -> Type;
+    fn term(&mut self) -> Type;
+    fn ident(&mut self) -> String;
     fn string(&mut self) -> String;
     fn number(&mut self) -> f64;
 }
 
-impl Expression for Interpreter {
+impl<'a> Expression for Interpreter<'a> {
     fn string(&mut self) -> String {
         let mut string = String::new();
         self.match_char('"');
@@ -86,28 +92,48 @@ impl Expression for Interpreter {
         number.parse().unwrap()
     }
 
-    fn expression(&mut self) -> Types {
+    fn ident(&mut self) -> String {
+        let mut ident = String::new();
+        while self.is_alphanum() {
+            ident.push(self.current());
+        }
+        ident
+    }
+
+    fn term(&mut self) -> Type {
         if self.is_digit() {
-            return Types::Number(self.number());
+            return Type::Number(self.number());
         }
 
         if self.matches_char('"') {
-            return Types::TextString(self.string());
+            return Type::TextString(self.string());
         }
 
-        // if self.is_alpha() {
-        //     let result = self.add();
-        //     match result {
-        //         Some(res) => return Types::Number(res),
-        //         None => return Types::Undefined,
-        //     }
-        // }
+        if self.is_alpha() {
+            let ident = self.ident();
+            let value = &self.value_table[&ident];
+            match value {
+                Type::Function(name) => {}
+                _ => return value.clone(),
+            }
+        }
 
+        Type::Undefined
+    }
+
+    fn expression(&mut self) -> Type {
         // if self.matches_char('(') {
-        //     return Types::Function(self.arrow_function());
+        //     return Type::Function(self.arrow_function());
         // }
 
-        Types::Undefined
+        self.term();
+        while ['+', '-'].contains(&self.lookahead()) {
+            match self.lookahead() {
+                _ => (),
+            }
+        }
+
+        Type::Undefined
     }
 }
 
@@ -116,12 +142,12 @@ mod test {
     use super::*;
 
     #[test]
-    fn should_interpret_expression_string() {
+    fn term_string() {
         let code = "\"jake\";";
         let mut interpreter = Interpreter::new(code.chars().collect());
-        let result = interpreter.expression();
+        let result = interpreter.term();
         match result {
-            Types::TextString(string) => {
+            Type::TextString(string) => {
                 assert_eq!(string, "jake");
             }
             _ => panic!("Expected string!"),
@@ -129,12 +155,12 @@ mod test {
     }
 
     #[test]
-    fn should_interpret_expression_number() {
+    fn term_number() {
         let code = "12;";
         let mut interpreter = Interpreter::new(code.chars().collect());
-        let result = interpreter.expression();
+        let result = interpreter.term();
         match result {
-            Types::Number(number) => {
+            Type::Number(number) => {
                 assert_eq!(number, 12f64);
             }
             _ => panic!("Expected string!"),
