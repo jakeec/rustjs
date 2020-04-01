@@ -2,6 +2,12 @@
 
 Seeing how far I can get building a recursive descent parsing interpreter for JavaScript syntax in Rust.
 
+### Notes
+
+- Should try pushing function scope onto a stack and popping when it goes out of stack rather than recursively spinning up a new compiler
+- Maintain two pointers, lookahead and current
+- What happens if lookahead and current pointers get out of sync?
+
 ### Values
 
 Values are stored against and identifier in a HashMap. Types are defined in the Types enum:

@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+mod interpreter_2;
+mod types;
 
 enum Operator {
     Equals,
@@ -51,6 +53,7 @@ impl Interpreter {
             return None;
         }
         self.lookahead = Some(self.source[self.counter]);
+        println!("{:?}", self.lookahead);
         self.lookahead
     }
 
@@ -323,22 +326,23 @@ impl Interpreter {
         println!("{:?}", &self.lookup_table["myFunc"]);
         if let Types::Function(scope_id) = &self.lookup_table[&name] {
             let scope: &Function = &self.scope_table[scope_id];
+            println!("scope: {:?}", scope);
             let mut scope_interpreter = Interpreter::new(scope.code.chars().collect());
             scope_interpreter.init();
             scope_interpreter.whitespace();
             scope_interpreter.program();
-            println!("code: {:?}", scope);
         }
     }
 
     fn program(&mut self) {
-        while self.counter < self.source.len() - 1 {
+        while self.lookahead_is_not(&['\x03', '}']) {
             if self.is_function_call() {
                 self.function_call();
             } else {
                 self.statement();
             }
             self.new_line();
+            self.whitespace();
         }
     }
 }
@@ -349,7 +353,6 @@ fn main() {
     var c = jakeVar + b;
     var myFunc = () => {
         var scopedVar = 10;
-        console.log();
     };
     myFunc();
     \x03";
