@@ -15,12 +15,15 @@ pub enum Type<'a> {
 impl<'a> Add for Type<'a> {
     type Output = Type<'a>;
 
-    fn add(self, Rhs: Type) -> Self::Output {
+    fn add(self, rhs: Type) -> Self::Output {
         use Type::*;
         match self {
             Null => Null,
             Undefined => Undefined,
-            Number(number) => Number(number),
+            Number(number) => match rhs {
+                Number(num) => Number(number + num),
+                _ => panic!("Not implemented!"),
+            },
             Boolean(boolean) => Boolean(boolean),
             TextString(string) => TextString(String::from(string)),
             Object(object) => Object(object),

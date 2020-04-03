@@ -64,6 +64,12 @@ impl<'a> Interpreter<'a> {
     fn is_alphanum(&self) -> bool {
         self.is_alpha() || self.is_digit()
     }
+
+    fn whitespace(&mut self) {
+        while self.lookahead() == ' ' {
+            self.match_char(' ');
+        }
+    }
 }
 
 trait Expression<'a> {
@@ -133,6 +139,7 @@ impl<'a> Expression<'a> for Interpreter<'a> {
 
     fn add(&mut self, prev: Type<'a>) -> Type<'a> {
         self.match_char(OP_ADD);
+        self.whitespace();
         let term = self.expression();
         prev + term
     }
@@ -143,6 +150,7 @@ impl<'a> Expression<'a> for Interpreter<'a> {
         // }
 
         let prev = self.term();
+        self.whitespace();
         if [OP_ADD, OP_SUB].contains(&self.lookahead()) {
             return match self.lookahead() {
                 OP_ADD => self.add(prev),
@@ -151,7 +159,7 @@ impl<'a> Expression<'a> for Interpreter<'a> {
             };
         }
 
-        Type::Undefined
+        prev
     }
 }
 
@@ -198,6 +206,19 @@ mod test {
                 assert_eq!(number, 10f64);
             }
             _ => panic!("Expected string!"),
+        }
+    }
+
+    #[test]
+    fn expression_add_two_numbers() {
+        let code = "10 + 10;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::Number(number) => {
+                assert_eq!(number, 20f64);
+            }
+            actual => panic!("Expected string found {:?}!", actual),
         }
     }
 }
