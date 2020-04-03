@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::operators::{OP_ADD, OP_SUB};
 use crate::types::{Function, Type};
 
 struct Interpreter<'a> {
@@ -65,15 +66,16 @@ impl<'a> Interpreter<'a> {
     }
 }
 
-trait Expression {
-    fn expression(&mut self) -> Type;
-    fn term(&mut self) -> Type;
+trait Expression<'a> {
+    fn expression(&mut self) -> Type<'a>;
+    fn term(&mut self) -> Type<'a>;
+    fn add(&mut self, prev: Type<'a>) -> Type<'a>;
     fn ident(&mut self) -> String;
     fn string(&mut self) -> String;
     fn number(&mut self) -> f64;
 }
 
-impl<'a> Expression for Interpreter<'a> {
+impl<'a> Expression<'a> for Interpreter<'a> {
     fn string(&mut self) -> String {
         let mut string = String::new();
         self.match_char('"');
@@ -100,7 +102,7 @@ impl<'a> Expression for Interpreter<'a> {
         ident
     }
 
-    fn term(&mut self) -> Type {
+    fn term(&mut self) -> Type<'a> {
         if self.is_digit() {
             return Type::Number(self.number());
         }
@@ -114,7 +116,13 @@ impl<'a> Expression for Interpreter<'a> {
             let value = &self.value_table[&ident];
             match value {
                 Type::Function(name) => {
-                    // evaluate the function and return the result
+                    if self.matches_char('(') {
+                        self.match_char('(');
+                        self.match_char(')');
+                    // execute function body and return result
+                    } else {
+                        // return function
+                    }
                 }
                 _ => return value.clone(),
             }
@@ -123,16 +131,24 @@ impl<'a> Expression for Interpreter<'a> {
         Type::Undefined
     }
 
-    fn expression(&mut self) -> Type {
+    fn add(&mut self, prev: Type<'a>) -> Type<'a> {
+        self.match_char(OP_ADD);
+        let term = self.expression();
+        prev + term
+    }
+
+    fn expression(&mut self) -> Type<'a> {
         // if self.matches_char('(') {
         //     return Type::Function(self.arrow_function());
         // }
 
-        self.term();
-        while ['+', '-'].contains(&self.lookahead()) {
-            match self.lookahead() {
-                _ => (),
-            }
+        let prev = self.term();
+        if [OP_ADD, OP_SUB].contains(&self.lookahead()) {
+            return match self.lookahead() {
+                OP_ADD => self.add(prev),
+                OP_SUB => Type::Undefined,
+                _ => Type::Undefined,
+            };
         }
 
         Type::Undefined

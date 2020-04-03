@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::Add;
 
 #[derive(Debug)]
 pub enum Type<'a> {
@@ -9,6 +10,23 @@ pub enum Type<'a> {
     TextString(String),
     Object(&'a Box<HashMap<String, Type<'a>>>),
     Function(String),
+}
+
+impl<'a> Add for Type<'a> {
+    type Output = Type<'a>;
+
+    fn add(self, Rhs: Type) -> Self::Output {
+        use Type::*;
+        match self {
+            Null => Null,
+            Undefined => Undefined,
+            Number(number) => Number(number),
+            Boolean(boolean) => Boolean(boolean),
+            TextString(string) => TextString(String::from(string)),
+            Object(object) => Object(object),
+            Function(name) => Function(String::from(name)),
+        }
+    }
 }
 
 impl<'a> Clone for Type<'a> {

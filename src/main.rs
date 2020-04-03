@@ -1,5 +1,7 @@
 use std::collections::HashMap;
+
 mod interpreter_2;
+mod operators;
 mod types;
 
 enum Operator {
