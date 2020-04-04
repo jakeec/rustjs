@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::operators::{OP_ADD, OP_SUB};
-use crate::types::{Function, Number, Type};
+use crate::types::{Function, Num, Type};
 
 struct Interpreter<'a> {
     scope_stack: Vec<Vec<char>>,
@@ -110,7 +110,7 @@ impl<'a> Expression<'a> for Interpreter<'a> {
 
     fn term(&mut self) -> Type<'a> {
         if self.is_digit() {
-            return Type::Number(Number::F64(self.number()));
+            return Type::Number(Num::F64(self.number()));
         }
 
         if self.matches_char('"') {
@@ -119,6 +119,9 @@ impl<'a> Expression<'a> for Interpreter<'a> {
 
         if self.is_alpha() {
             let ident = self.ident();
+            if ident == "undefined" {
+                return Type::Undefined;
+            }
             let value = &self.value_table[&ident];
             match value {
                 Type::Function(name) => {
@@ -186,7 +189,7 @@ mod test {
         let mut interpreter = Interpreter::new(code.chars().collect());
         let result = interpreter.term();
         match result {
-            Type::Number(Number::F64(number)) => {
+            Type::Number(Num::F64(number)) => {
                 assert_eq!(number, 12f64);
             }
             _ => panic!("Expected string!"),
@@ -199,10 +202,10 @@ mod test {
         let mut interpreter = Interpreter::new(code.chars().collect());
         interpreter
             .value_table
-            .insert(String::from("myVar"), Type::Number(Number::F64(10f64)));
+            .insert(String::from("myVar"), Type::Number(Num::F64(10f64)));
         let result = interpreter.term();
         match result {
-            Type::Number(Number::F64(number)) => {
+            Type::Number(Num::F64(number)) => {
                 assert_eq!(number, 10f64);
             }
             _ => panic!("Expected string!"),
@@ -215,7 +218,7 @@ mod test {
         let mut interpreter = Interpreter::new(code.chars().collect());
         let result = interpreter.expression();
         match result {
-            Type::Number(Number::F64(number)) => {
+            Type::Number(Num::F64(number)) => {
                 assert_eq!(number, 20f64);
             }
             actual => panic!("Expected string found {:?}!", actual),
@@ -258,6 +261,19 @@ mod test {
                 assert_eq!(string, "1010");
             }
             actual => panic!("Expected string found {:?}!", actual),
+        }
+    }
+
+    #[test]
+    fn expression_add_number_to_undefined() {
+        let code = "undefined + 10;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::Number(num) => {
+                assert_eq!(num, Num::NaN);
+            }
+            actual => panic!("Expected NaN found {:?}!", actual),
         }
     }
 }

@@ -2,15 +2,15 @@ use std::collections::HashMap;
 use std::ops::Add;
 use std::string::ToString;
 
-#[derive(Debug, Copy)]
-pub enum Number {
+#[derive(Debug, Copy, PartialEq)]
+pub enum Num {
     NaN,
     F64(f64),
 }
 
-impl Clone for Number {
+impl Clone for Num {
     fn clone(&self) -> Self {
-        use Number::*;
+        use Num::*;
         match self {
             NaN => NaN,
             F64(x) => F64(*x),
@@ -18,9 +18,9 @@ impl Clone for Number {
     }
 }
 
-impl ToString for Number {
+impl ToString for Num {
     fn to_string(&self) -> String {
-        use Number::*;
+        use Num::*;
         match self {
             NaN => String::from("NaN"),
             F64(num) => num.to_string(),
@@ -28,11 +28,11 @@ impl ToString for Number {
     }
 }
 
-impl Add for Number {
-    type Output = Number;
+impl Add for Num {
+    type Output = Num;
 
-    fn add(self, rhs: Number) -> Self::Output {
-        use Number::*;
+    fn add(self, rhs: Num) -> Self::Output {
+        use Num::*;
         match (self, rhs) {
             (F64(l), F64(r)) => F64(l + r),
             _ => NaN,
@@ -44,7 +44,7 @@ impl Add for Number {
 pub enum Type<'a> {
     Null,
     Undefined,
-    Number(Number),
+    Number(Num),
     Boolean(bool),
     TextString(String),
     Object(&'a Box<HashMap<String, Type<'a>>>),
@@ -57,8 +57,11 @@ impl<'a> Add for Type<'a> {
     fn add(self, rhs: Type) -> Self::Output {
         use Type::*;
         match self {
-            Null => Null,
-            Undefined => Undefined,
+            Null => panic!("Not implemented!"),
+            Undefined => match rhs {
+                Number(_) => Number(Num::NaN),
+                _ => panic!("Not implemented!"),
+            },
             Number(lhs) => match rhs {
                 Number(r) => Number(lhs + r),
                 TextString(r) => {

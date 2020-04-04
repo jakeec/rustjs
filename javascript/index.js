@@ -25,6 +25,10 @@ var m = undefined + aNumber;
 var n = [] + aNumber;
 var o = 10 + NaN;
 var p = NaN + 10;
+var q = true + true;
+var r = true + false;
+var s = false + true;
+var t = false + false;
 
 console.log(`a ${a} - ${typeof a}`);
 console.log(`b ${b} - ${typeof b}`);
@@ -42,3 +46,7 @@ console.log(`m ${m} - ${typeof m}`);
 console.log(`n ${n} - ${typeof n}`);
 console.log(`o ${o} - ${typeof o}`);
 console.log(`p ${p} - ${typeof p}`);
+console.log(`q ${q} - ${typeof q}`);
+console.log(`r ${r} - ${typeof r}`);
+console.log(`s ${s} - ${typeof s}`);
+console.log(`t ${t} - ${typeof t}`);
