@@ -53,6 +53,10 @@ impl<'a> Interpreter<'a> {
         self.lookahead() == char_to_match
     }
 
+    fn matches_any(&self, chars_to_match: &[char]) -> bool {
+        chars_to_match.contains(&self.lookahead())
+    }
+
     fn is_digit(&self) -> bool {
         self.lookahead().is_digit(10)
     }
@@ -139,11 +143,11 @@ impl<'a> Expression<'a> for Interpreter<'a> {
     }
 
     fn term(&mut self) -> Type<'a> {
-        println!("term");
         let mut ret = Type::Undefined;
         if self.is_digit() {
             ret = Type::Number(Num::F64(self.number()));
-        } else {
+        } else if self.matches_any(&['"', '\'']) {
+            ret = Type::TextString(self.string());
         }
 
         self.whitespace();
@@ -187,18 +191,18 @@ impl<'a> Expression<'a> for Interpreter<'a> {
 mod test {
     use super::*;
 
-    // #[test]
-    // fn term_string() {
-    //     let code = "\"jake\";";
-    //     let mut interpreter = Interpreter::new(code.chars().collect());
-    //     let result = interpreter.term();
-    //     match result {
-    //         Type::TextString(string) => {
-    //             assert_eq!(string, "jake");
-    //         }
-    //         _ => panic!("Expected string!"),
-    //     }
-    // }
+    #[test]
+    fn term_string() {
+        let code = "\"jake\";";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.term();
+        match result {
+            Type::TextString(string) => {
+                assert_eq!(string, "jake");
+            }
+            _ => panic!("Expected string!"),
+        }
+    }
 
     #[test]
     fn term_number() {
@@ -243,44 +247,44 @@ mod test {
         }
     }
 
-    // #[test]
-    // fn expression_add_two_strings() {
-    //     let code = "\"10\" + \"10\";";
-    //     let mut interpreter = Interpreter::new(code.chars().collect());
-    //     let result = interpreter.expression();
-    //     match result {
-    //         Type::TextString(string) => {
-    //             assert_eq!(string, "1010");
-    //         }
-    //         actual => panic!("Expected string found {:?}!", actual),
-    //     }
-    // }
+    #[test]
+    fn expression_add_two_strings() {
+        let code = "\"10\" + \"10\";";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::TextString(string) => {
+                assert_eq!(string, "1010");
+            }
+            actual => panic!("Expected string found {:?}!", actual),
+        }
+    }
 
-    // #[test]
-    // fn expression_add_number_to_string() {
-    //     let code = "\"10\" + 10;";
-    //     let mut interpreter = Interpreter::new(code.chars().collect());
-    //     let result = interpreter.expression();
-    //     match result {
-    //         Type::TextString(string) => {
-    //             assert_eq!(string, "1010");
-    //         }
-    //         actual => panic!("Expected string found {:?}!", actual),
-    //     }
-    // }
+    #[test]
+    fn expression_add_number_to_string() {
+        let code = "\"10\" + 10;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::TextString(string) => {
+                assert_eq!(string, "1010");
+            }
+            actual => panic!("Expected string found {:?}!", actual),
+        }
+    }
 
-    // #[test]
-    // fn expression_add_string_to_number() {
-    //     let code = "10 + \"10\";";
-    //     let mut interpreter = Interpreter::new(code.chars().collect());
-    //     let result = interpreter.expression();
-    //     match result {
-    //         Type::TextString(string) => {
-    //             assert_eq!(string, "1010");
-    //         }
-    //         actual => panic!("Expected string found {:?}!", actual),
-    //     }
-    // }
+    #[test]
+    fn expression_add_string_to_number() {
+        let code = "10 + \"10\";";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::TextString(string) => {
+                assert_eq!(string, "1010");
+            }
+            actual => panic!("Expected string found {:?}!", actual),
+        }
+    }
 
     // #[test]
     // fn expression_add_number_to_undefined() {
@@ -295,31 +299,31 @@ mod test {
     //     }
     // }
 
-    // #[test]
-    // fn expression_subtract_string_from_string() {
-    //     let code = "\"jake\" - \"e\";";
-    //     let mut interpreter = Interpreter::new(code.chars().collect());
-    //     let result = interpreter.expression();
-    //     match result {
-    //         Type::Number(num) => {
-    //             assert_eq!(num, Num::NaN);
-    //         }
-    //         actual => panic!("Expected NaN found {:?}!", actual),
-    //     }
-    // }
+    #[test]
+    fn expression_subtract_string_from_string() {
+        let code = "\"jake\" - \"e\";";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::Number(num) => {
+                assert_eq!(num, Num::NaN);
+            }
+            actual => panic!("Expected NaN found {:?}!", actual),
+        }
+    }
 
-    // #[test]
-    // fn expression_subtract_number_from_number() {
-    //     let code = "20 - 17;";
-    //     let mut interpreter = Interpreter::new(code.chars().collect());
-    //     let result = interpreter.expression();
-    //     match result {
-    //         Type::Number(Num::F64(num)) => {
-    //             assert_eq!(num, 3f64);
-    //         }
-    //         actual => panic!("Expected 3 found {:?}!", actual),
-    //     }
-    // }
+    #[test]
+    fn expression_subtract_number_from_number() {
+        let code = "20 - 17;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::Number(Num::F64(num)) => {
+                assert_eq!(num, 3f64);
+            }
+            actual => panic!("Expected 3 found {:?}!", actual),
+        }
+    }
 
     #[test]
     fn expression_multiple_operators() {
