@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ops::Add;
+use std::ops::{Add, Sub};
 use std::string::ToString;
 
 #[derive(Debug, Copy, PartialEq)]
@@ -35,6 +35,18 @@ impl Add for Num {
         use Num::*;
         match (self, rhs) {
             (F64(l), F64(r)) => F64(l + r),
+            _ => NaN,
+        }
+    }
+}
+
+impl Sub for Num {
+    type Output = Num;
+
+    fn sub(self, rhs: Num) -> Self::Output {
+        use Num::*;
+        match (self, rhs) {
+            (F64(l), F64(r)) => F64(l - r),
             _ => NaN,
         }
     }
@@ -78,6 +90,42 @@ impl<'a> Add for Type<'a> {
                     l.push_str(&r);
                     TextString(l)
                 }
+                Number(r) => {
+                    let mut l = lhs;
+                    l.push_str(&r.to_string());
+                    TextString(l)
+                }
+                _ => panic!("Not implemented!"),
+            },
+            Object(object) => Object(object),
+            Function(name) => Function(String::from(name)),
+        }
+    }
+}
+
+impl<'a> Sub for Type<'a> {
+    type Output = Type<'a>;
+
+    fn sub(self, rhs: Type) -> Self::Output {
+        use Type::*;
+        match self {
+            Null => panic!("Not implemented!"),
+            Undefined => match rhs {
+                Number(_) => Number(Num::NaN),
+                _ => panic!("Not implemented!"),
+            },
+            Number(lhs) => match rhs {
+                Number(r) => Number(lhs - r),
+                TextString(r) => {
+                    let mut l = lhs.to_string();
+                    l.push_str(&r);
+                    TextString(l)
+                }
+                _ => panic!("Not implemented!"),
+            },
+            Boolean(boolean) => Boolean(boolean),
+            TextString(lhs) => match rhs {
+                TextString(r) => Number(Num::NaN),
                 Number(r) => {
                     let mut l = lhs;
                     l.push_str(&r.to_string());

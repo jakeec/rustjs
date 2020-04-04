@@ -50,3 +50,5 @@ console.log(`q ${q} - ${typeof q}`);
 console.log(`r ${r} - ${typeof r}`);
 console.log(`s ${s} - ${typeof s}`);
 console.log(`t ${t} - ${typeof t}`);
+
+console.log('jake' - 'e');
