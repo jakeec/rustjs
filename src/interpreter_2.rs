@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::operators::{OP_ADD, OP_SUB};
-use crate::types::{Function, Type};
+use crate::types::{Function, Number, Type};
 
 struct Interpreter<'a> {
     scope_stack: Vec<Vec<char>>,
@@ -110,7 +110,7 @@ impl<'a> Expression<'a> for Interpreter<'a> {
 
     fn term(&mut self) -> Type<'a> {
         if self.is_digit() {
-            return Type::Number(self.number());
+            return Type::Number(Number::F64(self.number()));
         }
 
         if self.matches_char('"') {
@@ -186,7 +186,7 @@ mod test {
         let mut interpreter = Interpreter::new(code.chars().collect());
         let result = interpreter.term();
         match result {
-            Type::Number(number) => {
+            Type::Number(Number::F64(number)) => {
                 assert_eq!(number, 12f64);
             }
             _ => panic!("Expected string!"),
@@ -199,10 +199,10 @@ mod test {
         let mut interpreter = Interpreter::new(code.chars().collect());
         interpreter
             .value_table
-            .insert(String::from("myVar"), Type::Number(10f64));
+            .insert(String::from("myVar"), Type::Number(Number::F64(10f64)));
         let result = interpreter.term();
         match result {
-            Type::Number(number) => {
+            Type::Number(Number::F64(number)) => {
                 assert_eq!(number, 10f64);
             }
             _ => panic!("Expected string!"),
@@ -215,8 +215,47 @@ mod test {
         let mut interpreter = Interpreter::new(code.chars().collect());
         let result = interpreter.expression();
         match result {
-            Type::Number(number) => {
+            Type::Number(Number::F64(number)) => {
                 assert_eq!(number, 20f64);
+            }
+            actual => panic!("Expected string found {:?}!", actual),
+        }
+    }
+
+    #[test]
+    fn expression_add_two_strings() {
+        let code = "\"10\" + \"10\";";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::TextString(string) => {
+                assert_eq!(string, "1010");
+            }
+            actual => panic!("Expected string found {:?}!", actual),
+        }
+    }
+
+    #[test]
+    fn expression_add_number_to_string() {
+        let code = "\"10\" + 10;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::TextString(string) => {
+                assert_eq!(string, "1010");
+            }
+            actual => panic!("Expected string found {:?}!", actual),
+        }
+    }
+
+    #[test]
+    fn expression_add_string_to_number() {
+        let code = "10 + \"10\";";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::TextString(string) => {
+                assert_eq!(string, "1010");
             }
             actual => panic!("Expected string found {:?}!", actual),
         }
