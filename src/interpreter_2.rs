@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::operators::{OP_ADD, OP_SUB};
+use crate::operators::{OP_ADD, OP_DIV, OP_MUL, OP_SUB};
 use crate::types::{Function, Num, Type};
 
 struct Interpreter<'a> {
@@ -77,6 +77,9 @@ trait Expression<'a> {
     fn term(&mut self) -> Type<'a>;
     fn add(&mut self, prev: Type<'a>) -> Type<'a>;
     fn sub(&mut self, prev: Type<'a>) -> Type<'a>;
+    fn mul(&mut self, prev: Type<'a>) -> Type<'a>;
+    fn div(&mut self, prev: Type<'a>) -> Type<'a>;
+    fn factor(&mut self) -> Type<'a>;
     fn ident(&mut self) -> String;
     fn string(&mut self) -> String;
     fn number(&mut self) -> f64;
@@ -110,49 +113,102 @@ impl<'a> Expression<'a> for Interpreter<'a> {
     }
 
     fn term(&mut self) -> Type<'a> {
+        println!("YES");
+        let mut prev = Type::Undefined;
         if self.is_digit() {
-            return Type::Number(Num::F64(self.number()));
+            println!("YES");
+            prev = Type::Number(Num::F64(self.number()));
         }
 
         if self.matches_char('"') {
-            return Type::TextString(self.string());
+            prev = Type::TextString(self.string());
         }
 
         if self.is_alpha() {
             let ident = self.ident();
             if ident == "undefined" {
-                return Type::Undefined;
-            }
-            let value = &self.value_table[&ident];
-            match value {
-                Type::Function(name) => {
-                    if self.matches_char('(') {
-                        self.match_char('(');
-                        self.match_char(')');
-                    // execute function body and return result
-                    } else {
-                        // return function
+                prev = Type::Undefined;
+            } else {
+                let value = &self.value_table[&ident];
+                match value {
+                    Type::Function(name) => {
+                        if self.matches_char('(') {
+                            self.match_char('(');
+                            self.match_char(')');
+                        // execute function body and return result
+                        } else {
+                            // return function
+                        }
                     }
+                    _ => return value.clone(),
                 }
-                _ => return value.clone(),
             }
         }
 
-        Type::Undefined
+        self.whitespace();
+        println!("{:?}", self.lookahead());
+
+        if [OP_ADD, OP_SUB].contains(&self.lookahead()) {
+            println!("YES");
+            return match self.lookahead() {
+                OP_ADD => self.add(prev),
+                OP_SUB => self.sub(prev),
+                _ => Type::Undefined,
+            };
+        }
+
+        prev
     }
 
     fn add(&mut self, prev: Type<'a>) -> Type<'a> {
         self.match_char(OP_ADD);
         self.whitespace();
-        let term = self.expression();
+        let term = self.factor();
         prev + term
     }
 
     fn sub(&mut self, prev: Type<'a>) -> Type<'a> {
         self.match_char(OP_SUB);
         self.whitespace();
-        let term = self.expression();
+        let term = self.factor();
         prev - term
+    }
+
+    fn mul(&mut self, prev: Type<'a>) -> Type<'a> {
+        self.match_char(OP_MUL);
+        self.whitespace();
+        let factor = self.factor();
+        prev * factor
+    }
+
+    fn div(&mut self, prev: Type<'a>) -> Type<'a> {
+        self.match_char(OP_DIV);
+        self.whitespace();
+        let factor = self.factor();
+        prev + factor
+    }
+
+    fn factor(&mut self) -> Type<'a> {
+        let mut prev = Type::Undefined;
+        if self.matches_char('(') {
+            self.match_char('(');
+            self.whitespace();
+            prev = self.expression();
+            self.whitespace();
+            self.match_char(')');
+        } else {
+            prev = self.expression();
+        }
+
+        if [OP_ADD, OP_SUB].contains(&self.lookahead()) {
+            return match self.lookahead() {
+                OP_ADD => self.add(prev),
+                OP_SUB => self.sub(prev),
+                _ => Type::Undefined,
+            };
+        }
+
+        prev
     }
 
     fn expression(&mut self) -> Type<'a> {
@@ -162,10 +218,11 @@ impl<'a> Expression<'a> for Interpreter<'a> {
 
         let prev = self.term();
         self.whitespace();
-        if [OP_ADD, OP_SUB].contains(&self.lookahead()) {
+        if [OP_MUL, OP_DIV].contains(&self.lookahead()) {
+            println!("YEET");
             return match self.lookahead() {
-                OP_ADD => self.add(prev),
-                OP_SUB => self.sub(prev),
+                OP_MUL => self.mul(prev),
+                OP_DIV => self.div(prev),
                 _ => Type::Undefined,
             };
         }
@@ -306,6 +363,58 @@ mod test {
         match result {
             Type::Number(Num::F64(num)) => {
                 assert_eq!(num, 3f64);
+            }
+            actual => panic!("Expected 3 found {:?}!", actual),
+        }
+    }
+
+    #[test]
+    fn expression_multiple_operators() {
+        let code = "20 - 17 + 7;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::Number(Num::F64(num)) => {
+                assert_eq!(num, 10f64);
+            }
+            actual => panic!("Expected 3 found {:?}!", actual),
+        }
+    }
+
+    #[test]
+    fn expression_multiply_two_numbers() {
+        let code = "3 * 3;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::Number(Num::F64(num)) => {
+                assert_eq!(num, 9f64);
+            }
+            actual => panic!("Expected 3 found {:?}!", actual),
+        }
+    }
+
+    #[test]
+    fn expression_multiply_two_numbers_add_one() {
+        let code = "3 * 3 + 4;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::Number(Num::F64(num)) => {
+                assert_eq!(num, 13f64);
+            }
+            actual => panic!("Expected 3 found {:?}!", actual),
+        }
+    }
+
+    #[test]
+    fn expression_add_number_to_multiplied_numbers() {
+        let code = "4 + 3 * 3;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::Number(Num::F64(num)) => {
+                assert_eq!(num, 13f64);
             }
             actual => panic!("Expected 3 found {:?}!", actual),
         }

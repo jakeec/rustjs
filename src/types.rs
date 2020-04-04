@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ops::{Add, Sub};
+use std::ops::{Add, Mul, Sub};
 use std::string::ToString;
 
 #[derive(Debug, Copy, PartialEq)]
@@ -47,6 +47,18 @@ impl Sub for Num {
         use Num::*;
         match (self, rhs) {
             (F64(l), F64(r)) => F64(l - r),
+            _ => NaN,
+        }
+    }
+}
+
+impl Mul for Num {
+    type Output = Num;
+
+    fn mul(self, rhs: Num) -> Self::Output {
+        use Num::*;
+        match (self, rhs) {
+            (F64(l), F64(r)) => F64(l * r),
             _ => NaN,
         }
     }
@@ -135,6 +147,18 @@ impl<'a> Sub for Type<'a> {
             },
             Object(object) => Object(object),
             Function(name) => Function(String::from(name)),
+        }
+    }
+}
+
+impl<'a> Mul for Type<'a> {
+    type Output = Type<'a>;
+
+    fn mul(self, rhs: Type) -> Self::Output {
+        use Type::*;
+        match (self, rhs) {
+            (Number(Num::F64(l)), Number(Num::F64(r))) => Number(Num::F64(l * r)),
+            _ => Number(Num::NaN),
         }
     }
 }
