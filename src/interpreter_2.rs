@@ -114,15 +114,16 @@ impl<'a> Expression<'a> for Interpreter<'a> {
     }
 
     fn expression(&mut self) -> Type<'a> {
-        let mut ret = Type::Undefined;
-        let prev = self.factor();
-        match self.lookahead() {
-            OP_ADD => ret = self.add(prev),
-            OP_SUB => ret = self.sub(prev),
-            _ => ret = prev,
-        };
+        let mut prev = self.factor();
+        while [OP_ADD, OP_SUB].contains(&self.lookahead()) {
+            prev = match self.lookahead() {
+                OP_ADD => self.add(prev),
+                OP_SUB => self.sub(prev),
+                _ => prev,
+            };
+        }
 
-        ret
+        prev
     }
 
     fn factor(&mut self) -> Type<'a> {
@@ -138,6 +139,7 @@ impl<'a> Expression<'a> for Interpreter<'a> {
     }
 
     fn term(&mut self) -> Type<'a> {
+        println!("term");
         let mut ret = Type::Undefined;
         if self.is_digit() {
             ret = Type::Number(Num::F64(self.number()));
@@ -145,6 +147,7 @@ impl<'a> Expression<'a> for Interpreter<'a> {
         }
 
         self.whitespace();
+
         ret
     }
 
@@ -156,16 +159,18 @@ impl<'a> Expression<'a> for Interpreter<'a> {
             OP_ADD => prev + this,
             OP_SUB => prev - this,
             OP_MUL => prev * this,
-            OP_DIV => prev - this,
+            OP_DIV => prev / this,
             _ => Type::Undefined,
         }
     }
 
     fn add(&mut self, prev: Type<'a>) -> Type<'a> {
+        println!("add");
         self.operation(OP_ADD, prev)
     }
 
     fn sub(&mut self, prev: Type<'a>) -> Type<'a> {
+        println!("sub");
         self.operation(OP_SUB, prev)
     }
 
