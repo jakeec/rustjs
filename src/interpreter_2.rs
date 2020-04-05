@@ -148,6 +148,20 @@ impl<'a> Expression<'a> for Interpreter<'a> {
             ret = Type::Number(Num::F64(self.number()));
         } else if self.matches_any(&['"', '\'']) {
             ret = Type::TextString(self.string());
+        } else if self.is_alpha() {
+            let ident = self.ident();
+            match &ident[..] {
+                "undefined" => ret = Type::Undefined,
+                id => {
+                    let value = &self.value_table[id];
+                    match value {
+                        Type::Function(name) => {
+                            // evaluate function and return result
+                        }
+                        _ => ret = value.clone(),
+                    }
+                }
+            };
         }
 
         self.whitespace();
@@ -218,21 +232,21 @@ mod test {
         }
     }
 
-    // #[test]
-    // fn term_variable() {
-    //     let code = "myVar;";
-    //     let mut interpreter = Interpreter::new(code.chars().collect());
-    //     interpreter
-    //         .value_table
-    //         .insert(String::from("myVar"), Type::Number(Num::F64(10f64)));
-    //     let result = interpreter.term();
-    //     match result {
-    //         Type::Number(Num::F64(number)) => {
-    //             assert_eq!(number, 10f64);
-    //         }
-    //         _ => panic!("Expected string!"),
-    //     }
-    // }
+    #[test]
+    fn term_variable() {
+        let code = "myVar;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        interpreter
+            .value_table
+            .insert(String::from("myVar"), Type::Number(Num::F64(10f64)));
+        let result = interpreter.term();
+        match result {
+            Type::Number(Num::F64(number)) => {
+                assert_eq!(number, 10f64);
+            }
+            _ => panic!("Expected string!"),
+        }
+    }
 
     #[test]
     fn expression_add_two_numbers() {
@@ -286,18 +300,18 @@ mod test {
         }
     }
 
-    // #[test]
-    // fn expression_add_number_to_undefined() {
-    //     let code = "undefined + 10;";
-    //     let mut interpreter = Interpreter::new(code.chars().collect());
-    //     let result = interpreter.expression();
-    //     match result {
-    //         Type::Number(num) => {
-    //             assert_eq!(num, Num::NaN);
-    //         }
-    //         actual => panic!("Expected NaN found {:?}!", actual),
-    //     }
-    // }
+    #[test]
+    fn expression_add_number_to_undefined() {
+        let code = "undefined + 10;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::Number(num) => {
+                assert_eq!(num, Num::NaN);
+            }
+            actual => panic!("Expected NaN found {:?}!", actual),
+        }
+    }
 
     #[test]
     fn expression_subtract_string_from_string() {
