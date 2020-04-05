@@ -8,16 +8,29 @@ Seeing how far I can get building a recursive descent parsing interpreter for Ja
 - Maintain two pointers, lookahead and current
 - What happens if lookahead and current pointers get out of sync?
 - In JavaScript arrays are objects but it might be easier for me to treat them as a different type entirely
+- How should vars/lets/consts be stored? Like this?
+  ```rust
+  Declaration(Type)
+  // e.g.
+  Const(Type::Number(Num::F64(10.0)))
+  Var(Type::Number(Num::F64(10.0)))
+  Let(Type::Number(Num::F64(10.0)))
+  ```
 
 ### Values
 
 Values are stored against and identifier in a HashMap. Types are defined in the Types enum:
 
 ```rust
-enum Types {
+enum Num {
+    NaN,
+    F64(f64)
+}
+
+enum Type {
     Null,
     Undefined,
-    Number(f64),
+    Number(Num),
     Boolean(bool),
     TextString(String),
     Object(HashMap<String, Types>),

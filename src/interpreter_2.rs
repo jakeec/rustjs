@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use crate::operators::{OP_ADD, OP_DIV, OP_MUL, OP_SUB};
+use crate::keywords::{KW_CONST, KW_LET, KW_VAR};
+use crate::operators::{OP_ADD, OP_DIV, OP_EQ, OP_MUL, OP_SUB};
 use crate::types::{Function, Num, Type};
 
 struct Interpreter<'a> {
@@ -114,6 +115,7 @@ impl<'a> Expression<'a> for Interpreter<'a> {
         while self.is_alphanum() {
             ident.push(self.current());
         }
+        self.whitespace();
         ident
     }
 
@@ -207,8 +209,30 @@ impl<'a> Expression<'a> for Interpreter<'a> {
     }
 }
 
+trait Assign {
+    fn assign(&mut self);
+}
+
+impl<'a> Assign for Interpreter<'a> {
+    fn assign(&mut self) {
+        let keyword = self.ident();
+        match &keyword[..] {
+            KW_VAR => {
+                let id = self.ident();
+                self.match_char(OP_EQ);
+                self.whitespace();
+                let value = self.expression();
+                self.value_table.insert(id, value);
+            }
+            KW_CONST => println!("CONST"),
+            KW_LET => println!("LET"),
+            id => println!("{}", id),
+        }
+    }
+}
+
 #[cfg(test)]
-mod test {
+mod expression_tests {
     use super::*;
 
     #[test]
@@ -411,6 +435,19 @@ mod test {
     }
 
     #[test]
+    fn expression_parentheses() {
+        let code = "4 * (4 + 2);";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::Number(Num::F64(num)) => {
+                assert_eq!(num, 24f64);
+            }
+            actual => panic!("Expected 3 found {:?}!", actual),
+        }
+    }
+
+    #[test]
     fn expression_lots_of_operators_with_parentheses() {
         let code = "10 + 9 + 6 - 8 * 10 / (2 + 9 - 4);";
         let mut interpreter = Interpreter::new(code.chars().collect());
@@ -420,6 +457,23 @@ mod test {
                 assert_eq!(num, 13.571428571428571f64);
             }
             actual => panic!("Expected 3 found {:?}!", actual),
+        }
+    }
+}
+
+#[cfg(test)]
+mod assign_tests {
+    use super::*;
+
+    #[test]
+    fn assign_number() {
+        let source = "var jake = 26;";
+        let mut interpreter = Interpreter::new(source.chars().collect());
+        interpreter.assign();
+        let value = interpreter.value_table.get("jake");
+        match value.unwrap() {
+            Type::Number(Num::F64(val)) => assert_eq!(*val, 26f64),
+            actual => panic!("Expected f64 found {:?}", actual),
         }
     }
 }
