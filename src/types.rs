@@ -204,6 +204,6 @@ impl<'a> Clone for Type<'a> {
 
 #[derive(Debug)]
 pub struct Function<'a> {
-    arguments: HashMap<String, Type<'a>>,
-    body: String,
+    pub arguments: HashMap<String, Type<'a>>,
+    pub body: String,
 }

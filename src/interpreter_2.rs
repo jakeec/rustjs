@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::keywords::{KW_CONST, KW_LET, KW_VAR};
+use crate::keywords::{KW_CONST, KW_FUNCTION, KW_LET, KW_VAR};
 use crate::operators::{OP_ADD, OP_DIV, OP_EQ, OP_MUL, OP_SUB};
 use crate::types::{Function, Num, Type};
 
@@ -210,10 +210,39 @@ impl<'a> Expression<'a> for Interpreter<'a> {
 }
 
 trait Assign {
+    fn function(&mut self);
     fn assign(&mut self);
 }
 
 impl<'a> Assign for Interpreter<'a> {
+    fn function(&mut self) {
+        if self.matches_char('f') {
+            let ident = self.ident();
+            match &ident[..] {
+                KW_FUNCTION => {
+                    self.whitespace();
+                    let name = self.ident();
+                    self.match_char('(');
+                    self.match_char(')');
+                    self.whitespace();
+                    self.match_char('{');
+                    self.match_char('\n');
+                    let mut code_block = String::new();
+                    while self.lookahead() != '}' {
+                        code_block.push(self.current());
+                    }
+                    let function = Function {
+                        arguments: HashMap::new(),
+                        body: code_block,
+                    };
+                    self.function_table.insert(name, function);
+                }
+                _ => (),
+            }
+        } else if self.matches_char('(') {
+        }
+    }
+
     fn assign(&mut self) {
         let keyword = self.ident();
         match &keyword[..] {
@@ -552,13 +581,26 @@ mod program_tests {
     #[test]
     fn program_test() {
         let source = "var a = 10;
-        var b = 20;
-        var c = a + b;";
+        let b = 20;
+        const c = a + b;";
         let mut interpreter = Interpreter::new(source.chars().collect());
         interpreter.program();
         match interpreter.value_table.get("c").unwrap() {
             Type::Number(Num::F64(val)) => assert_eq!(*val, 30f64),
             actual => panic!("Expected 30 found {:?}", actual),
         }
+    }
+
+    #[test]
+    fn function_test() {
+        let source = "function myFunction() {
+            var a = 10;
+            var b = 20;
+            var c = a + b;
+        }";
+        let mut interpreter = Interpreter::new(source.chars().collect());
+        interpreter.function();
+        println!("{:?}", interpreter.function_table);
+        // panic!("PRINT");
     }
 }
