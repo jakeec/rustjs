@@ -248,6 +248,28 @@ impl<'a> Assign for Interpreter<'a> {
     }
 }
 
+trait Program {
+    fn program(&mut self);
+}
+
+impl<'a> Program for Interpreter<'a> {
+    fn program(&mut self) {
+        loop {
+            self.assign();
+            if self.matches_char(';') {
+                self.match_char(';');
+            }
+            if self.current >= self.scope_stack.last().unwrap().len() {
+                break;
+            }
+            if self.matches_char('\n') {
+                self.match_char('\n');
+            }
+            self.whitespace();
+        }
+    }
+}
+
 #[cfg(test)]
 mod expression_tests {
     use super::*;
@@ -519,6 +541,24 @@ mod assign_tests {
         match value.unwrap() {
             Type::TextString(val) => assert_eq!(*val, "jake"),
             actual => panic!("Expected string found {:?}", actual),
+        }
+    }
+}
+
+#[cfg(test)]
+mod program_tests {
+    use super::*;
+
+    #[test]
+    fn program_test() {
+        let source = "var a = 10;
+        var b = 20;
+        var c = a + b;";
+        let mut interpreter = Interpreter::new(source.chars().collect());
+        interpreter.program();
+        match interpreter.value_table.get("c").unwrap() {
+            Type::Number(Num::F64(val)) => assert_eq!(*val, 30f64),
+            actual => panic!("Expected 30 found {:?}", actual),
         }
     }
 }
