@@ -131,15 +131,21 @@ impl<'a> Expression<'a> for Interpreter<'a> {
     }
 
     fn factor(&mut self) -> Type<'a> {
-        let mut ret = Type::Undefined;
-        let prev = self.term();
-        match self.lookahead() {
-            OP_MUL => ret = self.mul(prev),
-            OP_DIV => ret = self.div(prev),
-            _ => ret = prev,
+        let mut prev = Type::Undefined;
+        if self.matches_char('(') {
+            self.match_char('(');
+            prev = self.expression();
+            self.match_char(')');
+        } else {
+            prev = self.term();
+        }
+        prev = match self.lookahead() {
+            OP_MUL => self.mul(prev),
+            OP_DIV => self.div(prev),
+            _ => prev,
         };
 
-        ret
+        prev
     }
 
     fn term(&mut self) -> Type<'a> {
@@ -386,6 +392,32 @@ mod test {
         match result {
             Type::Number(Num::F64(num)) => {
                 assert_eq!(num, 13f64);
+            }
+            actual => panic!("Expected 3 found {:?}!", actual),
+        }
+    }
+
+    #[test]
+    fn expression_lots_of_operators() {
+        let code = "10 + 9 + 6 - 8 * 10 / 2 + 9 - 4;";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::Number(Num::F64(num)) => {
+                assert_eq!(num, -10f64);
+            }
+            actual => panic!("Expected 3 found {:?}!", actual),
+        }
+    }
+
+    #[test]
+    fn expression_lots_of_operators_with_parentheses() {
+        let code = "10 + 9 + 6 - 8 * 10 / (2 + 9 - 4);";
+        let mut interpreter = Interpreter::new(code.chars().collect());
+        let result = interpreter.expression();
+        match result {
+            Type::Number(Num::F64(num)) => {
+                assert_eq!(num, 13.571428571428571f64);
             }
             actual => panic!("Expected 3 found {:?}!", actual),
         }
