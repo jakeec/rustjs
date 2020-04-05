@@ -224,9 +224,26 @@ impl<'a> Assign for Interpreter<'a> {
                 let value = self.expression();
                 self.value_table.insert(id, value);
             }
-            KW_CONST => println!("CONST"),
-            KW_LET => println!("LET"),
-            id => println!("{}", id),
+            KW_CONST => {
+                let id = self.ident();
+                self.match_char(OP_EQ);
+                self.whitespace();
+                let value = self.expression();
+                self.value_table.insert(id, value);
+            }
+            KW_LET => {
+                let id = self.ident();
+                self.match_char(OP_EQ);
+                self.whitespace();
+                let value = self.expression();
+                self.value_table.insert(id, value);
+            }
+            id => {
+                self.match_char(OP_EQ);
+                self.whitespace();
+                let value = self.expression();
+                self.value_table.insert(String::from(id), value);
+            }
         }
     }
 }
@@ -474,6 +491,34 @@ mod assign_tests {
         match value.unwrap() {
             Type::Number(Num::F64(val)) => assert_eq!(*val, 26f64),
             actual => panic!("Expected f64 found {:?}", actual),
+        }
+    }
+
+    #[test]
+    fn assign_string() {
+        let source = "var jake = \"jake\";";
+        let mut interpreter = Interpreter::new(source.chars().collect());
+        interpreter.assign();
+        let value = interpreter.value_table.get("jake");
+        match value.unwrap() {
+            Type::TextString(val) => assert_eq!(*val, "jake"),
+            actual => panic!("Expected string found {:?}", actual),
+        }
+    }
+
+    #[test]
+    fn assign_string_no_keyword() {
+        let source = "jake = \"jake\";";
+        let mut interpreter = Interpreter::new(source.chars().collect());
+        interpreter.value_table.insert(
+            String::from("jake"),
+            Type::TextString(String::from("carrington")),
+        );
+        interpreter.assign();
+        let value = interpreter.value_table.get("jake");
+        match value.unwrap() {
+            Type::TextString(val) => assert_eq!(*val, "jake"),
+            actual => panic!("Expected string found {:?}", actual),
         }
     }
 }
