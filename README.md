@@ -42,7 +42,7 @@ Fortunately, plain JavaScript has a very manageable set of types that we need to
 
 ### Functions
 
-Not sure of the best approach for this so for the time being only arrow functions are being parsed and are stored as a value the same way as any other statement. However the value they store is just a string id wrapped in a Function enum tuple struct. The id is then used to retrieve a Function struct from a separate scope table. For now this just holds arguments (not yet implemented), and `code` (the string value of the scope block), which is lazily executed only when the function is called (not yet implemented).
+Not sure of the best approach for this so for the time being only arrow functions are being parsed and are stored as a value the same way as any other assignment. However the value they store is just a string id wrapped in a Function enum tuple struct. The id is then used to retrieve a Function struct from a separate scope table. For now this just holds arguments (not yet implemented), and `code` (the string value of the scope block), which is lazily executed only when the function is called (not yet implemented).
 
 ### Objects (not yet implemented)
 
